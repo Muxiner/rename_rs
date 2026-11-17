@@ -2,6 +2,16 @@
 name = "rename-rust"
 version = "0.1.0"
 edition = "2021"
+# 显式声明两个可执行文件：GUI（Tauri）+ 命令行工具
+autobins = false
+
+[[bin]]
+name = "rename-rust"
+path = "src/main.rs"
+
+[[bin]]
+name = "rename-rust-cli"
+path = "src/bin/cli.rs"
 
 [lib]
 name = "rename_rust_lib"
@@ -19,4 +29,5 @@ anyhow = "1"
 thiserror = "1"
 regex = "1"
 walkdir = "2"
+chrono = "0.4"
 tokio = { version = "1", features = ["full"] }

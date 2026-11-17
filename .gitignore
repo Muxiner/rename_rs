@@ -15,3 +15,6 @@ node_modules/
 .idea/
 *.swp
 *.swo
+
+# 发布产物（.app / CLI 二进制，由 scripts/build-release.sh 生成）
+release/

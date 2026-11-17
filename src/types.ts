@@ -1,66 +1,114 @@
-// 前后端共享类型定义，与 Rust 端 models.rs 一一对应
+/**
+ * 前后端共享类型定义，与 Rust 端 models.rs **严格一致**（v2 契约）。
+ *
+ * - 所有字段名保持后端序列化后的 snake_case / camelCase 约定；
+ * - `RenameMode` 是带 tag 的枚举：`{ type, params }`；
+ * - 预览条目带 `reason`，用于展示冲突 / 无变化原因。
+ */
 
 /** 文件操作状态 */
 export type Status = "ok" | "conflict" | "unchanged";
 
-/** 文件排序依据 */
-export type SortBy = "name" | "modified";
+/** 文件排序依据（name 为自然排序，不是字典序） */
+export type SortBy = "name" | "modified" | "created";
 
 /** 重命名模式标识 */
-export type ModeType = "find_replace" | "sequential" | "suffix";
+export type ModeType = "find_replace" | "sequential" | "pattern" | "suffix";
 
-/** 重命名模式（发送给后端的格式） */
-export interface RenameMode {
-  type: ModeType;
-  params: FindReplaceParams | SequentialParams | SuffixParams;
-}
+/** 编号范围：每个目录独立 / 全局连续 */
+export type NumberScope = "per_dir" | "global";
 
-/** 模式A 参数：查找替换 */
+/** 主题 */
+export type Theme = "dark" | "light";
+
+/** 模式 A 参数：查找替换 */
 export interface FindReplaceParams {
-  find: string;       // 查找文本或正则
-  replace: string;    // 替换文本
-  use_regex: boolean; // 是否启用正则
+  find: string;
+  replace: string;
+  use_regex: boolean;
+  case_sensitive: boolean;
+  whole_word: boolean;
+  first_only: boolean;
+  include_extension: boolean;
 }
 
-/** 模式B 参数：序号命名 */
+/** 模式 B 参数：序号命名 */
 export interface SequentialParams {
-  prefix: string;     // 前缀
-  separator: string;  // 前缀与数字间的连接符
-  start: number;      // 起始编号
+  prefix: string;
+  separator: string;
+  start: number;
+  step: number;
+  /** 0 = 自动按编号位数补零 */
+  pad_width: number;
+  suffix: string;
+  scope: NumberScope;
 }
 
-/** 模式C 参数：统一后缀 */
-export interface SuffixParams {
-  target_suffix: string; // 目标后缀（不带点号）
-  force_all: boolean;    // 是否强制转换所有扩展名
-  lowercase: boolean;    // 是否转小写
+/** 模式 C 参数：模板命名 */
+export interface PatternParams {
+  template: string;
+  start: number;
+  step: number;
+  pad_width: number;
+  scope: NumberScope;
 }
+
+/** 模式 D 参数：统一后缀 */
+export interface SuffixParams {
+  target_suffix: string;
+  force_all: boolean;
+  lowercase: boolean;
+}
+
+/** 发送给后端的重命名模式（带 tag 的联合类型） */
+export type RenameMode =
+  | { type: "find_replace"; params: FindReplaceParams }
+  | { type: "sequential"; params: SequentialParams }
+  | { type: "pattern"; params: PatternParams }
+  | { type: "suffix"; params: SuffixParams };
 
 /** 预览结果条目 */
 export interface PreviewItem {
-  id: number;            // 文件唯一 ID
-  relative_path: string; // 相对目录路径（如 "assets/icons/"）
-  old_name: string;      // 原始文件名
-  new_name: string;      // 新文件名
-  status: Status;        // 操作状态
+  /** 本次遍历内稳定唯一 ID（按遍历顺序 0..n） */
+  id: number;
+  /** 相对父目录路径，如 "assets/icons/"；根目录为空串 */
+  relative_path: string;
+  old_name: string;
+  new_name: string;
+  status: Status;
+  /** ok 时为空；conflict/unchanged 时为中文原因 */
+  reason: string;
 }
 
 /** 执行结果（每条文件一个） */
 export interface ExecuteResult {
-  id: number;       // 对应预览项 ID
-  success: boolean; // 是否成功
-  message: string;  // 成功信息或失败原因
+  /** 对应预览项 ID */
+  id: number;
+  success: boolean;
+  message: string;
+}
+
+/** 撤销状态 */
+export interface UndoStatus {
+  available: boolean;
+  count: number;
 }
 
 /** 重命名进度事件载荷 */
 export interface ProgressPayload {
-  current: number; // 当前已处理数
-  total: number;   // 总数量
+  current: number;
+  total: number;
 }
+
+/** 日志级别 */
+export type LogKind = "info" | "success" | "error";
 
 /** 日志条目（底部日志面板用） */
 export interface LogEntry {
-  time: string;  // 时间戳（HH:MM:SS）
-  text: string;  // 日志内容
-  ok: boolean;   // 成功/失败
+  /** 时间戳（HH:MM:SS） */
+  time: string;
+  text: string;
+  /** 兼容旧字段：成功/失败 */
+  ok: boolean;
+  kind: LogKind;
 }

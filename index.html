@@ -1,13 +1,46 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="本地批量重命名工具：查找替换、序号命名、模板命名、统一后缀，预览后一键执行并支持撤销。"
+    />
     <title>批量重命名工具</title>
     <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      // 首屏前确定主题，避免闪烁：优先读取持久化设置，否则跟随系统。
+      (function () {
+        var theme = "dark";
+        try {
+          var raw = localStorage.getItem("rename-rust:settings:v1");
+          if (raw) {
+            var saved = JSON.parse(raw);
+            if (saved && (saved.theme === "dark" || saved.theme === "light")) {
+              theme = saved.theme;
+            } else if (
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches
+            ) {
+              theme = "light";
+            }
+          } else if (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: light)").matches
+          ) {
+            theme = "light";
+          }
+        } catch (error) {
+          theme = "dark";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
+    <noscript>本工具需要启用 JavaScript 才能运行。</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

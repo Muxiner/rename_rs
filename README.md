@@ -163,3 +163,57 @@ struct ExecuteResult {
 + 预览阶段生成的映射关系在执行阶段需重新计算，不信任前端传入的文件名（防止篡改）
 
 + 冲突检测在预览和执行两个阶段都要进行（执行时文件系统状态可能变化）
+## 十一、v2 实际实现与可执行产物
+
+> 本文件前文是最初的规格说明；以下为实现升级后的实际情况。
+
+### 11.1 能力升级
+
+- **四种命名模式**：查找替换（正则/大小写/全词/仅首个/含扩展名）、序号命名
+  （起始/步长/自动或固定补零/数字后缀/每目录或全局编号）、模板命名
+  （`{name}` `{original}` `{ext}` `{index}` `{date}` `{time}` `{parent}`）、统一后缀。
+- **更稳的执行**：自然排序、两遍冲突检测（带中文原因）、执行前重算、交换/链式
+  改名走两阶段临时名、拒绝覆盖外部文件、单文件失败不中断、取消后已完成项仍可撤销。
+- **撤销**：`undo_last_rename` / `get_undo_status`，只保留最近一次成功批次（内存级）。
+- **UI**：深/浅双主题、统计 chips、搜索过滤、操作日志、Toast、快捷键、设置持久化。
+
+### 11.2 构建产物
+
+```bash
+# 一键构建 .app + CLI（产物在 release/）
+bash scripts/build-release.sh
+
+# 需要 .dmg 时
+BUILD_DMG=1 bash scripts/build-release.sh
+```
+
+产物：
+
+- `release/macos/批量重命名工具.app`：双击即用的 macOS GUI 应用
+- `release/bin/rename-rust-cli`：命令行可执行文件（与 GUI 共用同一命名引擎）
+
+### 11.3 CLI 用法
+
+```bash
+rename-rust-cli <目录> [选项]            # 默认只预览，--apply 才执行
+
+# 查找替换
+rename-rust-cli ~/Pictures --filter jpg,png --find IMG_ --replace PIC_ --apply
+
+# 递归 + 序号命名（每组补零 3 位、全局连续编号）
+rename-rust-cli ~/Photos -r -m seq --prefix Trip --pad 3 --scope global --apply
+
+# 模板命名 / JSON 输出
+rename-rust-cli ~/Downloads -m pattern --template '{date}_{name}' --json
+
+rename-rust-cli --help                   # 完整参数说明
+```
+
+退出码：`0` 成功；`1` 执行时有失败项；`2` 参数或运行错误。
+
+### 11.4 依赖版本说明
+
+受构建环境离线缓存限制，`src-tauri/Cargo.lock` 锁定在 tauri 2.10.2 /
+tauri-plugin-dialog 2.6.0，因此 `package.json` 中的 `@tauri-apps/api` /
+`@tauri-apps/plugin-dialog` 也精确对齐到 2.10.1 / 2.6.0。联网环境可整体升级到
+最新 2.x（`cargo update` + `npm install @tauri-apps/api@latest @tauri-apps/plugin-dialog@latest`）。
